@@ -3,10 +3,24 @@ import 'package:todolistapp/constants/colors.dart';
 import 'package:todolistapp/model/todo.dart';
 import 'package:todolistapp/widget/todo_item.dart';
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
   Home({Key? key}) : super(key: key);
 
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
   final todosList = ToDo.todoList();
+  List<ToDo> _foundToDo = [];
+  final todoController = TextEditingController();
+
+  @override
+  void initState() {
+    _foundToDo = todosList;
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,15 +43,98 @@ class Home extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           )),
                     ),
-                    for (ToDo todoo in todosList) TodoItem(todo: todoo),
+                    for (ToDo todoo in _foundToDo.reversed)
+                      TodoItem(
+                          todo: todoo,
+                          onTodoChanged: _handleTodoChange,
+                          onTodoDeleted: _deleteTodoItem),
                   ],
                 ),
               )
             ]),
-          )
+          ),
+          Align(
+              alignment: Alignment.bottomCenter,
+              child: Row(children: [
+                Expanded(
+                    child: Container(
+                        margin:
+                            EdgeInsets.only(bottom: 20, right: 20, left: 20),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey,
+                              offset: Offset(0.0, 0.0),
+                              blurRadius: 10.0,
+                              spreadRadius: 0.0,
+                            )
+                          ],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: TextField(
+                            controller: todoController,
+                            decoration: InputDecoration(
+                              hintText: "Add a new todo item",
+                              border: InputBorder.none,
+                            )))),
+                Container(
+                  margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+                  child: ElevatedButton(
+                    child: Text("+", style: TextStyle(fontSize: 30)),
+                    onPressed: () {
+                      _addTodoitem(todoController.text);
+                    },
+                    style: ElevatedButton.styleFrom(
+                        primary: tdBlue,
+                        minimumSize: Size(60, 60),
+                        elevation: 10),
+                  ),
+                ),
+              ]))
         ],
       ),
     );
+  }
+
+  void _handleTodoChange(ToDo todo) {
+    setState(() {
+      todo.isDone = !todo.isDone;
+    });
+  }
+
+  void _deleteTodoItem(String id) {
+    setState(() {
+      todosList.removeWhere((item) => item.id == id);
+    });
+  }
+
+  void _addTodoitem(String toDo) {
+    setState(() {
+      todosList.add(ToDo(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        todoTitle: toDo,
+      ));
+    });
+    todoController.clear();
+  }
+
+  void _runFilter(String enteredKeyWord) {
+    List<ToDo> results = [];
+    if (enteredKeyWord.isEmpty) {
+      results = todosList;
+    } else {
+      results = todosList
+          .where((item) => item.todoTitle!
+              .toLowerCase()
+              .contains(enteredKeyWord.toLowerCase()))
+          .toList();
+    }
+    setState(() {
+      _foundToDo = results;
+    });
   }
 
   Widget searchBox() {
@@ -48,6 +145,7 @@ class Home extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: TextField(
+        onChanged: (value) => _runFilter(value),
         decoration: InputDecoration(
           contentPadding: EdgeInsets.all(0),
           prefixIcon: Icon(Icons.search, size: 20, color: tdBlack),
